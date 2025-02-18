@@ -12,6 +12,20 @@ from .visualization import VisualizationManager
 from .video_processing import VideoProcessor
 from .object_tracking import ObjectTracker
 
+# Fix for missing _C module in MultiScaleDeformableAttention
+from grounding_dino.groundingdino.models.GroundingDINO.ms_deform_attn import multi_scale_deformable_attn_pytorch, MultiScaleDeformableAttnFunction
+
+# Create replacement for MultiScaleDeformableAttnFunction.apply
+class DummyFunction:
+    @staticmethod
+    def apply(value, spatial_shapes, level_start_index, sampling_locations, attention_weights, im2col_step):
+        return multi_scale_deformable_attn_pytorch(
+            value, spatial_shapes, sampling_locations, attention_weights
+        )
+
+# Replace the original function with our implementation
+MultiScaleDeformableAttnFunction.apply = DummyFunction.apply
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class Sam2VideoTracker:
