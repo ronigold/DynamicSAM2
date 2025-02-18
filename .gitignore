@@ -11,3 +11,5 @@ checkpoints/
 
 # Ignore Python cache files
 __pycache__/
+gdino_checkpoints/
+*.pth
