@@ -11,8 +11,11 @@ checkpoints/
 *.pt
 *.pth
 gdino_checkpoints/
+!gdino_checkpoints/download_ckpts.sh
 
 # Ignore Python cache files
 __pycache__/
 *.py[cod]
 *.class
+!gdino_checkpoints/
+!gdino_checkpoints/download_ckpts.shdownload_ckpts.sh
