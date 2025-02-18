@@ -5,11 +5,14 @@
 # Ignore checkpoints
 checkpoints/
 *.ckpt
+.ipynb_checkpoints/
 
 # Ignore PyTorch model files
 *.pt
+*.pth
+gdino_checkpoints/
 
 # Ignore Python cache files
 __pycache__/
-gdino_checkpoints/
-*.pth
+*.py[cod]
+*.class
