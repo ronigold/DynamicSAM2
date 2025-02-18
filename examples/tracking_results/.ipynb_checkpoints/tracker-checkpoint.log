@@ -1,0 +1,83 @@
+2025-02-18 15:21:44 [INFO] Loading SAM2 models...
+2025-02-18 15:26:05 [INFO] Loading SAM2 models...
+2025-02-18 15:30:41 [INFO] Loading SAM2 models...
+2025-02-18 15:31:00 [INFO] Loading SAM2 models...
+2025-02-18 15:32:48 [INFO] Loading SAM2 models...
+2025-02-18 15:39:26 [INFO] Loading SAM2 models...
+2025-02-18 15:39:30 [INFO] 
+=== Starting Video Processing ===
+2025-02-18 15:39:31 [DEBUG] Prepared 25 frames for chunk 0-24
+2025-02-18 15:39:31 [INFO] Processing chunk: current_frame = 0, chunk_end = 24, frames in chunk = 25
+2025-02-18 15:39:31 [DEBUG] Creating masks for 6 boxes
+2025-02-18 15:39:48 [INFO] 
+=== Starting Detection Merge ===
+2025-02-18 15:39:48 [INFO] Active SAM2 tracks after filtering: 5
+2025-02-18 15:39:48 [INFO] Filtered SAM2 tracks remaining: 5
+2025-02-18 15:39:48 [INFO] Active Track 1: ID 1, Box [  0 392 156 711]
+2025-02-18 15:39:48 [INFO] Active Track 2: ID 2, Box [268  24 576 660]
+2025-02-18 15:39:48 [INFO] Active Track 3: ID 3, Box [704 438 902 605]
+2025-02-18 15:39:48 [INFO] Active Track 4: ID 4, Box [566 476 714 589]
+2025-02-18 15:39:48 [INFO] Active Track 5: ID 5, Box [  0 544 929 719]
+2025-02-18 15:39:48 [INFO] DINO new detections: 5
+2025-02-18 15:39:48 [INFO] New Detection 1: Label person <, Box [262.7683   21.15271 582.22144 668.1216 ]
+2025-02-18 15:39:48 [INFO] New Detection 2: Label > bed, Box [  3.6622314 515.96185   965.54285   717.96735  ]
+2025-02-18 15:39:48 [INFO] New Detection 3: Label > pillow <, Box [701.6552  433.59198 911.1701  611.0667 ]
+2025-02-18 15:39:48 [INFO] New Detection 4: Label > bed, Box [  3.807495 440.16434  966.2313   718.1848  ]
+2025-02-18 15:39:48 [INFO] New Detection 5: Label pillow <, Box [560.3252 467.8506 719.0906 597.0769]
+2025-02-18 15:39:48 [INFO] === Merge Summary ===
+2025-02-18 15:39:48 [INFO] Initial active tracked objects: 5
+2025-02-18 15:39:48 [INFO] New objects added: 0
+2025-02-18 15:39:48 [INFO] Final object count: 5
+2025-02-18 15:39:48 [INFO] Final Object 1: ID 1, Box [  0 392 156 711]
+2025-02-18 15:39:48 [INFO] Final Object 2: ID 2, Box [268  24 576 660]
+2025-02-18 15:39:48 [INFO] Final Object 3: ID 3, Box [704 438 902 605]
+2025-02-18 15:39:48 [INFO] Final Object 4: ID 4, Box [566 476 714 589]
+2025-02-18 15:39:48 [INFO] Final Object 5: ID 5, Box [  0 544 929 719]
+2025-02-18 15:39:48 [DEBUG] Cleaned up chunk directory: temp_frames/chunk_0_24
+2025-02-18 15:39:48 [DEBUG] Prepared 10 frames for chunk 24-33
+2025-02-18 15:39:48 [INFO] Processing chunk: current_frame = 24, chunk_end = 33, frames in chunk = 10
+2025-02-18 15:39:53 [INFO] 
+=== Starting Detection Merge ===
+2025-02-18 15:39:53 [INFO] Active SAM2 tracks after filtering: 5
+2025-02-18 15:39:53 [INFO] Filtered SAM2 tracks remaining: 5
+2025-02-18 15:39:53 [INFO] Active Track 1: ID 1, Box [132   0 349 567]
+2025-02-18 15:39:53 [INFO] Active Track 2: ID 2, Box [391  62 632 481]
+2025-02-18 15:39:53 [INFO] Active Track 3: ID 3, Box [742 455 939 624]
+2025-02-18 15:39:53 [INFO] Active Track 4: ID 4, Box [603 494 750 608]
+2025-02-18 15:39:53 [INFO] Active Track 5: ID 5, Box [  0 559 963 719]
+2025-02-18 15:39:53 [INFO] DINO new detections: 6
+2025-02-18 15:39:53 [INFO] New Detection 1: Label person <, Box [385.79526  58.94545 639.34204 487.09253]
+2025-02-18 15:39:53 [INFO] New Detection 2: Label > bed, Box [   3.4224854  457.69043   1004.64844    718.0847   ]
+2025-02-18 15:39:53 [INFO] New Detection 3: Label person <, Box [126.29602    2.643402 355.995    574.24084 ]
+2025-02-18 15:39:53 [INFO] New Detection 4: Label > bed, Box [   2.9276733  541.06      1004.17914    717.75323  ]
+2025-02-18 15:39:53 [INFO] New Detection 5: Label > pillow <, Box [737.9439 450.9115 948.6192 629.5967]
+2025-02-18 15:39:53 [INFO] New Detection 6: Label > pillow <, Box [377.08954 495.7537  583.2646  598.6617 ]
+2025-02-18 15:39:53 [DEBUG] Detection 6 has no overlap - adding as new object
+2025-02-18 15:39:53 [DEBUG] Creating masks for 1 boxes
+2025-02-18 15:39:53 [INFO] Added new object with ID 6, Box [377.08954 495.7537  583.2646  598.6617 ]
+2025-02-18 15:39:53 [INFO] === Merge Summary ===
+2025-02-18 15:39:53 [INFO] Initial active tracked objects: 5
+2025-02-18 15:39:53 [INFO] New objects added: 1
+2025-02-18 15:39:53 [INFO] Final object count: 6
+2025-02-18 15:39:53 [INFO] Final Object 1: ID 1, Box [132.   0. 349. 567.]
+2025-02-18 15:39:53 [INFO] Final Object 2: ID 2, Box [391.  62. 632. 481.]
+2025-02-18 15:39:53 [INFO] Final Object 3: ID 3, Box [742. 455. 939. 624.]
+2025-02-18 15:39:53 [INFO] Final Object 4: ID 4, Box [603. 494. 750. 608.]
+2025-02-18 15:39:53 [INFO] Final Object 5: ID 5, Box [  0. 559. 963. 719.]
+2025-02-18 15:39:53 [INFO] Final Object 6: ID 6, Box [377.08953857 495.75369263 583.2645874  598.66168213]
+2025-02-18 15:39:53 [DEBUG] Cleaned up chunk directory: temp_frames/chunk_24_33
+2025-02-18 15:39:53 [INFO] Filtered out 1 objects with fewer than 5 valid frames
+2025-02-18 15:39:53 [INFO] Creating final video with only valid objects...
+2025-02-18 15:39:54 [DEBUG] First frame path: tracking_results/00000_tracked.jpg
+2025-02-18 15:39:54 [DEBUG] First frame exists: True
+2025-02-18 15:39:54 [INFO] Creating video from 34 frames
+2025-02-18 15:39:54 [INFO] Target FPS: 5
+2025-02-18 15:39:54 [INFO] Output path: tracking_results/tracked.mp4
+2025-02-18 15:39:54 [INFO] Creating video with OpenCV
+2025-02-18 15:39:54 [INFO] Creating video at 5 fps, resolution: 1280x720
+2025-02-18 15:39:54 [INFO] Successfully opened writer with codec mp4v
+2025-02-18 15:39:55 [INFO] Successfully wrote 34/34 frames
+2025-02-18 15:39:55 [INFO] OpenCV video saved at: tracking_results/tracked.mp4
+2025-02-18 15:39:55 [INFO] Renamed output video to: tracking_results/bedroom_tracked.mp4
+2025-02-18 15:39:55 [INFO] Tracking complete. Found 5 unique objects after filtering.
+2025-02-18 15:39:55 [DEBUG] Cleaned up temporary frames directory
