@@ -11,3 +11,4 @@ def run_script(directory, script_name):
 # Run the scripts in their respective directories
 run_script('checkpoints', 'download_ckpts.sh')
 run_script('gdino_checkpoints', 'download_ckpts.sh')
+run_script('yolo_checkpoints', 'download_ckpts.sh')

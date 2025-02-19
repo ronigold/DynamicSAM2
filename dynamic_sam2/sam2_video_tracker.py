@@ -1,3 +1,5 @@
+#sam2_video_tracker.py
+
 import logging
 import torch
 import cv2
@@ -32,7 +34,6 @@ class Sam2VideoTracker:
     def __init__(
         self,
         video_path: str,
-        text_prompt: str,
         detection_model,
         output_dir: str = "tracking_results",
         frames_dir: str = "temp_frames",
@@ -48,7 +49,6 @@ class Sam2VideoTracker:
         save_masks: bool = False  # Whether to save masks in tracked_objects dictionary
     ):
         self.video_path = Path(video_path)
-        self.text_prompt = text_prompt.lower()
         self.detection_model = detection_model
         self.output_dir = Path(output_dir)
         self.frames_dir = Path(frames_dir)
@@ -58,14 +58,16 @@ class Sam2VideoTracker:
         self.min_tracked_frames = min_tracked_frames
         self.save_masks = save_masks
         
-        # Dictionary to track object positions, classes and masks across frames
+        # Dictionary to track object positions, classes, confidences and masks across frames
         # {object_id: {
         #    "frames": {frame_idx: box_coordinates}, 
         #    "class": class_name,
+        #    "confidence": {frame_idx: confidence_score},
         #    "masks": {frame_idx: mask} (optional)
         # }}
         self.tracked_objects = {}
         self.object_classes = {}  # Temporary storage for object classes during tracking
+        self.object_confidences = {}  # Temporary storage for confidence scores
         
         # Initialize logging
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -97,7 +99,7 @@ class Sam2VideoTracker:
             sam2_cfg_path, sam2_ckpt_path
         )
         
-        # Storage for frame data
+        # Storage for frame data (now including confidences)
         self.frame_data = {}
 
     def _init_logger(self):
@@ -170,8 +172,8 @@ class Sam2VideoTracker:
                 boxes.append([0, 0, 1, 1])
         return np.array(boxes)
     
-    def _update_tracked_objects(self, frame_idx, boxes, stable_ids, labels=None, masks=None):
-        """Update tracked objects dictionary with position data, class labels, and masks"""
+    def _update_tracked_objects(self, frame_idx, boxes, stable_ids, labels=None, masks=None, confidences=None):
+        """Update tracked objects dictionary with position data, class labels, confidences, and masks"""
         for i, obj_id in enumerate(stable_ids):
             # Skip invalid boxes [0,0,1,1]
             if (i < len(boxes) and 
@@ -183,6 +185,7 @@ class Sam2VideoTracker:
                     obj_data = {
                         "frames": {},
                         "class": self.object_classes.get(obj_id, "unknown"),
+                        "confidence": {},
                     }
                     if self.save_masks:
                         obj_data["masks"] = {}
@@ -190,6 +193,15 @@ class Sam2VideoTracker:
                 
                 # Store box coordinates
                 self.tracked_objects[obj_id]["frames"][frame_idx] = boxes[i].tolist()
+                
+                # Store confidence if available
+                if confidences is not None and i < len(confidences):
+                    self.tracked_objects[obj_id]["confidence"][frame_idx] = confidences[i]
+                    # Also store in temporary dict for propagation during tracking
+                    self.object_confidences[obj_id] = confidences[i]
+                elif obj_id in self.object_confidences:
+                    # If no new confidence, use previous confidence (for tracked frames)
+                    self.tracked_objects[obj_id]["confidence"][frame_idx] = self.object_confidences[obj_id]
                 
                 # Store mask if requested and available
                 if self.save_masks and masks is not None and i < len(masks):
@@ -229,17 +241,24 @@ class Sam2VideoTracker:
             # Count valid frames (excluding [0,0,1,1] boxes which might be in the frames dict)
             valid_frames = {}
             valid_masks = {} if self.save_masks and "masks" in obj_data else None
+            valid_confidences = {}
             
             for frame_idx, box in obj_data["frames"].items():
                 if not (box[0] == 0 and box[1] == 0 and box[2] == 1 and box[3] == 1):
                     valid_frames[frame_idx] = box
+                    
+                    # Include confidence for valid frames
+                    if "confidence" in obj_data and frame_idx in obj_data["confidence"]:
+                        valid_confidences[frame_idx] = obj_data["confidence"][frame_idx]
+                    
                     if valid_masks is not None and frame_idx in obj_data["masks"]:
                         valid_masks[frame_idx] = obj_data["masks"][frame_idx]
                     
             if len(valid_frames) >= self.min_tracked_frames:
                 new_obj_data = {
                     "frames": valid_frames,
-                    "class": obj_data["class"]
+                    "class": obj_data["class"],
+                    "confidence": valid_confidences,
                 }
                 if valid_masks is not None:
                     new_obj_data["masks"] = valid_masks
@@ -304,9 +323,8 @@ class Sam2VideoTracker:
     
                 # First frame of video needs initial detection
                 if current_frame == 0:
-                    boxes, labels = self.detection_model.detect(
+                    boxes, labels, confidences = self.detection_model.detect(
                         chunk_frames[0],
-                        self.text_prompt
                     )
                     
                     if boxes is not None and len(boxes) > 0:
@@ -319,28 +337,35 @@ class Sam2VideoTracker:
                                 for box in boxes
                             ]
                             
-                            # Initialize object classes
+                            # Initialize object classes and confidences
                             for i, obj_id in enumerate(stable_ids):
                                 if i < len(labels):
                                     self.object_classes[obj_id] = labels[i]
+                                if confidences is not None and i < len(confidences):
+                                    self.object_confidences[obj_id] = confidences[i]
                             
-                            # Update tracked objects including masks
-                            self._update_tracked_objects(current_frame, boxes, stable_ids, labels, masks)
+                            # Update tracked objects including masks and confidences
+                            self._update_tracked_objects(
+                                current_frame, boxes, stable_ids, 
+                                labels, masks, confidences
+                            )
                         else:
                             boxes = np.array([])
                             masks = np.array([])
                             labels = []
                             stable_ids = []
+                            confidences = []
                     else:
                         boxes = np.array([])
                         masks = np.array([])
                         labels = []
                         stable_ids = []
+                        confidences = []
                         
-                    self.frame_data[current_frame] = (boxes, masks, labels, stable_ids)
+                    self.frame_data[current_frame] = (boxes, masks, labels, stable_ids, confidences)
     
                 # Get current objects (either from initial detection or previous merge)
-                boxes, masks, labels, stable_ids = self.frame_data[current_frame]
+                boxes, masks, labels, stable_ids, confidences = self.frame_data[current_frame]
                 
                 # Check if we have objects to track
                 if len(boxes) == 0 or len(masks) == 0:
@@ -350,15 +375,15 @@ class Sam2VideoTracker:
                     self.visualizer.visualize_frame(
                         chunk_frames[0],
                         boxes, masks, labels,
-                        stable_ids=stable_ids
+                        stable_ids=stable_ids,
+                        confidences=confidences
                     )
                     
                     # Check if we need to run detection on the last frame of this chunk
                     if chunk_end >= 0:
                         # Get new DINO detections on the last frame of chunk
-                        new_boxes, new_labels = self.detection_model.detect(
+                        new_boxes, new_labels, new_confidences = self.detection_model.detect(
                             chunk_frames[-1],
-                            self.text_prompt
                         )
                         
                         if new_boxes is not None and len(new_boxes) > 0:
@@ -373,34 +398,37 @@ class Sam2VideoTracker:
                                     for box in new_boxes
                                 ]
                                 
-                                # Initialize object classes for new detections
+                                # Initialize object classes and confidences for new detections
                                 for i, obj_id in enumerate(new_stable_ids):
                                     if i < len(new_labels):
                                         self.object_classes[obj_id] = new_labels[i]
+                                    if new_confidences is not None and i < len(new_confidences):
+                                        self.object_confidences[obj_id] = new_confidences[i]
                                 
                                 # Update frame data and tracked objects
                                 self.frame_data[chunk_end] = (
-                                    new_boxes, new_masks, new_labels, new_stable_ids
+                                    new_boxes, new_masks, new_labels, new_stable_ids, new_confidences
                                 )
                                 self._update_tracked_objects(
-                                    chunk_end, new_boxes, new_stable_ids, new_labels, new_masks
+                                    chunk_end, new_boxes, new_stable_ids, 
+                                    new_labels, new_masks, new_confidences
                                 )
                                 
                                 # Visualize frame with new detections
                                 self.visualizer.visualize_frame(
                                     all_frame_paths[chunk_end],
                                     new_boxes, new_masks, new_labels,
-                                    new_stable_ids
+                                    new_stable_ids, new_confidences
                                 )
                             else:
                                 # Store empty data if masks creation failed
                                 self.frame_data[chunk_end] = (
-                                    np.array([]), np.array([]), [], []
+                                    np.array([]), np.array([]), [], [], []
                                 )
                         else:
                             # Store empty data if no new detections
                             self.frame_data[chunk_end] = (
-                                np.array([]), np.array([]), [], []
+                                np.array([]), np.array([]), [], [], []
                             )
                     
                     # Clean up chunk directory and move to next chunk
@@ -438,7 +466,8 @@ class Sam2VideoTracker:
                 self.visualizer.visualize_frame(
                     chunk_frames[0],
                     boxes, masks, labels,
-                    stable_ids=stable_ids
+                    stable_ids=stable_ids,
+                    confidences=confidences
                 )
     
                 # Track objects through chunk - note that frame indices are relative to chunk
@@ -460,65 +489,81 @@ class Sam2VideoTracker:
                     final_masks = self._process_logits_to_masks(mask_logits)
                     final_boxes = self._masks_to_boxes(final_masks)
     
-                    # Map tracked object IDs to original labels
+                    # Map tracked object IDs to original labels and confidences
                     id_to_idx = {oid: i for i, oid in enumerate(stable_ids)}
                     final_labels = []
                     final_stable_ids = []
+                    final_confidences = []
                     
                     for oid in obj_ids:
                         if oid in id_to_idx:
                             idx = id_to_idx[oid]
                             final_labels.append(labels[idx])
                             final_stable_ids.append(stable_ids[idx])
+                            # Use original confidence for tracked object
+                            if confidences is not None and idx < len(confidences):
+                                final_confidences.append(confidences[idx])
+                            elif oid in self.object_confidences:
+                                final_confidences.append(self.object_confidences[oid])
+                            else:
+                                final_confidences.append(0.0)
                         else:
                             final_labels.append("unknown")
                             final_stable_ids.append(oid)
+                            final_confidences.append(0.0)
     
-                    # Update tracked objects with masks
-                    self._update_tracked_objects(f_idx, final_boxes, final_stable_ids, final_labels, final_masks)
+                    # Update tracked objects with masks and confidences
+                    self._update_tracked_objects(
+                        f_idx, final_boxes, final_stable_ids, 
+                        final_labels, final_masks, final_confidences
+                    )
                             
                     # Store and visualize frame results - use actual frame from all_frame_paths for visualization
                     self.frame_data[f_idx] = (
-                        final_boxes, final_masks, final_labels, final_stable_ids
+                        final_boxes, final_masks, final_labels, final_stable_ids, final_confidences
                     )
                     self.visualizer.visualize_frame(
                         all_frame_paths[f_idx],
                         final_boxes, final_masks, final_labels,
-                        final_stable_ids
+                        final_stable_ids, final_confidences
                     )
     
                 # Last frame of chunk - merge SAM2 results with new DINO detections
                 if chunk_end >= 0:
                     # Get SAM2 tracking results for the last frame
-                    old_boxes_pf, old_masks_pf, old_labels_pf, old_stable_ids_pf = \
+                    old_boxes_pf, old_masks_pf, old_labels_pf, old_stable_ids_pf, old_confidences_pf = \
                         self.frame_data[chunk_end]
                     
                     # Get new DINO detections - use the last frame in chunk
-                    new_boxes, new_labels = self.detection_model.detect(
+                    new_boxes, new_labels, new_confidences = self.detection_model.detect(
                         chunk_frames[-1],
-                        self.text_prompt
                     )
                     
                     # Merge tracked and newly detected objects
-                    merged_boxes, merged_masks, merged_labels, merged_stable_ids = \
+                    merged_boxes, merged_masks, merged_labels, merged_stable_ids, merged_confidences = \
                         self.object_tracker.merge_detections(
-                            old_boxes_pf, old_masks_pf, old_labels_pf, old_stable_ids_pf,
-                            new_boxes, new_labels,
+                            old_boxes_pf, old_masks_pf, old_labels_pf, old_stable_ids_pf, old_confidences_pf,
+                            new_boxes, new_labels, new_confidences,
                             frame_path=chunk_frames[-1],
-                            create_masks_fn=self._create_masks_from_boxes
+                            create_masks_fn=self._create_masks_from_boxes,
+                            update_confidence_for_tracked=True
                         )
     
-                    # Update tracked objects with merged results and masks
-                    self._update_tracked_objects(chunk_end, merged_boxes, merged_stable_ids, merged_labels, merged_masks)
+                    # Update tracked objects with merged results
+                    self._update_tracked_objects(
+                        chunk_end, merged_boxes, merged_stable_ids, 
+                        merged_labels, merged_masks, merged_confidences
+                    )
                     
                     # Update last frame with merged results
                     self.frame_data[chunk_end] = (
-                        merged_boxes, merged_masks, merged_labels, merged_stable_ids
+                        merged_boxes, merged_masks, merged_labels, 
+                        merged_stable_ids, merged_confidences
                     )
                     self.visualizer.visualize_frame(
                         all_frame_paths[chunk_end],
                         merged_boxes, merged_masks, merged_labels,
-                        merged_stable_ids
+                        merged_stable_ids, merged_confidences
                     )
     
                 # Clean up chunk directory after processing
@@ -556,7 +601,13 @@ class Sam2VideoTracker:
                             valid_labels = []
                             valid_ids = []
                             
-                            boxes, masks, labels, stable_ids = self.frame_data[frame_idx]
+                            # Unpack frame data (now includes confidences)
+                            if len(self.frame_data[frame_idx]) >= 5:
+                                boxes, masks, labels, stable_ids, confidences = self.frame_data[frame_idx]
+                            else:
+                                # Backward compatibility
+                                boxes, masks, labels, stable_ids = self.frame_data[frame_idx]
+                                confidences = None
                             
                             for i, obj_id in enumerate(stable_ids):
                                 if obj_id in self.tracked_objects and frame_idx in self.tracked_objects[obj_id]["frames"]:
@@ -571,10 +622,17 @@ class Sam2VideoTracker:
                                 valid_masks = np.array(valid_masks)
                                 
                                 # Re-visualize frame with only filtered objects
+                                valid_confidences = []
+                                for obj_id in valid_ids:
+                                    if obj_id in self.tracked_objects and frame_idx in self.tracked_objects[obj_id].get("confidence", {}):
+                                        valid_confidences.append(self.tracked_objects[obj_id]["confidence"][frame_idx])
+                                    else:
+                                        valid_confidences.append(0.0)
+                                
                                 self.visualizer.visualize_frame(
                                     all_frame_paths[frame_idx],
                                     valid_boxes, valid_masks, valid_labels,
-                                    valid_ids
+                                    valid_ids, valid_confidences
                                 )
                     
                     # Now create video from re-visualized frames
